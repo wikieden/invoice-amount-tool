@@ -24,6 +24,11 @@ classifiers = [
 ]
 dependencies = ["pypdf>=4.0"]
 
+[project.urls]
+Homepage = "https://github.com/wikieden/invoice-amount-tool"
+Repository = "https://github.com/wikieden/invoice-amount-tool"
+Issues = "https://github.com/wikieden/invoice-amount-tool/issues"
+
 [project.scripts]
 invoice-totaler = "invoice_amount_tool.cli:main"
 

@@ -21,6 +21,20 @@
 
 ## 安装
 
+从 GitHub Release 安装 wheel：
+
+```bash
+python -m pip install https://github.com/wikieden/invoice-amount-tool/releases/download/v0.1.0/invoice_amount_tool-0.1.0-py3-none-any.whl
+```
+
+用 `pipx` 安装成独立命令行工具：
+
+```bash
+pipx install https://github.com/wikieden/invoice-amount-tool/releases/download/v0.1.0/invoice_amount_tool-0.1.0-py3-none-any.whl
+```
+
+从源码安装：
+
 ```bash
 python -m pip install .
 ```
@@ -57,6 +71,12 @@ invoice-totaler ~/Desktop/发票.7z --format json -o 发票金额分类统计.js
 
 ```bash
 invoice-totaler ./发票 -o 发票金额分类统计.xlsx
+```
+
+或处理单个 PDF/OFD 文件：
+
+```bash
+invoice-totaler ./发票/火车票/26949134178000969211.ofd -o 单张发票统计.xlsx
 ```
 
 输出的 Excel 包含 3 个页签：
