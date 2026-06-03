@@ -1,0 +1,4 @@
+interface:
+  display_name: "Invoice Totaler"
+  short_description: "Summarize PDF/OFD invoice amounts"
+  default_prompt: "Use $invoice-totaler to total the invoices in this folder or archive."

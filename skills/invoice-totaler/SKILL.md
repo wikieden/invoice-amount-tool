@@ -1,0 +1,53 @@
+---
+name: invoice-totaler
+description: Summarize invoice amounts from PDF/OFD files, folders, zip archives, or 7z archives using the invoice-totaler CLI. Use when the user asks to total, classify, deduplicate, audit, export, or report invoice/fapiao/发票 amounts.
+---
+
+# Invoice Totaler
+
+Use this skill to turn a pile of invoices into a classified amount summary and an audit-friendly output file.
+
+## Workflow
+
+1. Identify the input path from the user: a directory, a single `.pdf`/`.ofd`, `.zip`, or `.7z`.
+2. Choose output format:
+   - Default to `.xlsx` for user-facing summaries.
+   - Use `.csv` or `.json` when the user asks for data interchange or automation.
+3. Ensure the CLI is available:
+   ```bash
+   command -v invoice-totaler || uv tool install invoice-amount-tool
+   ```
+   If `uv` cannot find a fresh PyPI package because of cache or mirror lag:
+   ```bash
+   uv tool install --default-index https://pypi.org/simple --refresh-package invoice-amount-tool invoice-amount-tool
+   ```
+4. Run the tool:
+   ```bash
+   invoice-totaler INPUT_PATH -o OUTPUT.xlsx
+   ```
+   For alternate formats:
+   ```bash
+   invoice-totaler INPUT_PATH --format json -o summary.json
+   invoice-totaler INPUT_PATH --format csv -o summary.csv
+   ```
+5. Verify output exists and read the command summary. For `.xlsx`, confirm it is a valid zip or open/import it when the environment supports spreadsheet inspection.
+6. Report the key totals, unique invoice count, output path, and any caveats.
+
+## Output Expectations
+
+- Preserve currency separation. Do not convert USD/CNY unless the user explicitly asks and provides a rate or requests live lookup.
+- Mention that duplicate PDF/OFD copies are deduplicated by invoice number.
+- For `.7z`, the system needs `7zz`, `7z`, or `bsdtar`; if unavailable, ask for an extracted folder or install an archive tool.
+- For image-only scanned PDFs, explain that the current CLI does not perform OCR.
+
+## Amount Policy
+
+For detailed amount-selection rules, read [references/amount-policy.md](references/amount-policy.md) when the user asks about auditability, reimbursement policy, or why a number was chosen.
+
+## Examples
+
+```bash
+invoice-totaler ~/Desktop/发票.7z -o 发票金额分类统计.xlsx
+invoice-totaler ./发票 -o 发票金额分类统计.xlsx
+invoice-totaler ./发票/单张发票.ofd --format json -o summary.json
+```

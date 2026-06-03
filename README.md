@@ -103,6 +103,21 @@ invoice-totaler ./发票 -o 发票金额分类统计.xlsx
 invoice-totaler ./发票/火车票/26949134178000969211.ofd -o 单张发票统计.xlsx
 ```
 
+## 作为 Codex Skill 使用
+
+仓库内置了一个可复制到 Codex skills 目录的 agent skill：
+
+```bash
+mkdir -p ~/.codex/skills
+cp -R skills/invoice-totaler ~/.codex/skills/invoice-totaler
+```
+
+安装后可以在新会话里显式调用：
+
+```text
+$invoice-totaler 统计这个压缩包里的发票金额
+```
+
 输出的 Excel 包含 3 个页签：
 
 - `总览`：分类汇总和币种总计
