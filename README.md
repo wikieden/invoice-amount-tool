@@ -149,7 +149,44 @@ cp -R /tmp/invoice-amount-tool/skills/invoice-totaler ~/.claude/skills/invoice-t
 /invoice-totaler 统计这个压缩包里的发票金额
 ```
 
-这个 skill 的 frontmatter 包含 `allowed-tools: Bash Read Write`。这是 Claude Code 支持的扩展字段，用于在 skill 激活时预批准基础 shell / 文件读写工具；其他 Agent Skills host 不支持时会忽略它。
+这个 skill 的 frontmatter 使用 `name`、`description`、`license`、`metadata` 这些跨工具字段，便于 Codex、Claude Code、Kiro、OpenCode 等工具读取。Claude Code 如需预批准 shell / 文件工具，可在项目权限设置里额外配置。
+
+### 作为 Kiro Skill 使用
+
+Kiro 支持 Agent Skills，可在 Agent Steering & Skills 里选择 Import a skill，并填入这个 GitHub skill folder URL：
+
+```text
+https://github.com/wikieden/invoice-amount-tool/tree/main/skills/invoice-totaler
+```
+
+也可以手动复制到全局 skills 目录：
+
+```bash
+mkdir -p ~/.kiro/skills
+git clone --depth 1 https://github.com/wikieden/invoice-amount-tool.git /tmp/invoice-amount-tool
+cp -R /tmp/invoice-amount-tool/skills/invoice-totaler ~/.kiro/skills/invoice-totaler
+```
+
+Workspace 级别则放到项目的 `.kiro/skills/invoice-totaler`。
+
+### 作为 OpenCode Skill 使用
+
+OpenCode 支持 `SKILL.md`，可放到全局或项目目录：
+
+```bash
+mkdir -p ~/.config/opencode/skill
+git clone --depth 1 https://github.com/wikieden/invoice-amount-tool.git /tmp/invoice-amount-tool
+cp -R /tmp/invoice-amount-tool/skills/invoice-totaler ~/.config/opencode/skill/invoice-totaler
+```
+
+项目级别：
+
+```bash
+mkdir -p .opencode/skill
+cp -R /tmp/invoice-amount-tool/skills/invoice-totaler .opencode/skill/invoice-totaler
+```
+
+OpenCode 也会发现 Claude-compatible 路径，例如 `~/.claude/skills/invoice-totaler`。
 
 ### Skill 发布渠道
 

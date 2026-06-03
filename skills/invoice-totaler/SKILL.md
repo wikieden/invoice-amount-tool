@@ -1,7 +1,11 @@
 ---
 name: invoice-totaler
 description: Summarize invoice amounts from PDF/OFD files, folders, zip archives, or 7z archives using the invoice-totaler CLI. Use when the user asks to total, classify, deduplicate, audit, export, or report invoice/fapiao/发票 amounts.
-allowed-tools: Bash Read Write
+license: MIT
+metadata:
+  package: invoice-amount-tool
+  command: invoice-totaler
+  requires: shell, filesystem read/write, uv/pip/pipx, optional 7zz/7z/bsdtar
 ---
 
 # Invoice Totaler
@@ -38,7 +42,8 @@ Use this skill to turn a pile of invoices into a classified amount summary and a
 
 - Codex: install with `$skill-installer`, invoke as `$invoice-totaler`.
 - Claude Code: copy or install the folder to `~/.claude/skills/invoice-totaler` or `.claude/skills/invoice-totaler`, then invoke as `/invoice-totaler`.
-- The `allowed-tools` frontmatter is a Claude Code convenience that can pre-approve `Bash`, `Read`, and `Write` while this skill is active. Other Agent Skills hosts may ignore it.
+- Kiro: import the GitHub skill-folder URL or copy the folder to `~/.kiro/skills/invoice-totaler` or `.kiro/skills/invoice-totaler`.
+- OpenCode: copy the folder to `~/.config/opencode/skill/invoice-totaler`, `.opencode/skill/invoice-totaler`, or use the Claude-compatible `~/.claude/skills/invoice-totaler` path.
 - The skill deliberately delegates parsing to the published `invoice-totaler` CLI, so any host only needs shell access and normal filesystem read/write access.
 
 ## Output Expectations
