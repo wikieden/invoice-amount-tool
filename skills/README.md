@@ -52,4 +52,6 @@ cp -R /tmp/invoice-amount-tool/skills/invoice-totaler ~/.config/opencode/skill/i
 
 OpenCode also discovers Claude-compatible skill locations such as `~/.claude/skills/invoice-totaler`.
 
-The skill delegates deterministic invoice parsing to the `invoice-totaler` CLI from the `invoice-amount-tool` PyPI package.
+OpenClaw, Hermes, and other Agent Skills hosts can import the same GitHub folder URL or copy `skills/invoice-totaler` into the host's skills directory.
+
+The skill delegates deterministic invoice parsing to the `invoice-totaler` CLI from the `invoice-amount-tool` PyPI package. For audit or reimbursement workflows, run the CLI with `--strict` and review the `问题清单` sheet or JSON `problem_rows`.

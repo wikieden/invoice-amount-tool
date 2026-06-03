@@ -26,17 +26,26 @@ Use this skill to turn a pile of invoices into a classified amount summary and a
    ```bash
    uv tool install --default-index https://pypi.org/simple --refresh-package invoice-amount-tool invoice-amount-tool
    ```
+   Check the local runtime when dependency health matters:
+   ```bash
+   invoice-totaler doctor
+   ```
 4. Run the tool:
    ```bash
    invoice-totaler INPUT_PATH -o OUTPUT.xlsx
+   ```
+   Use strict mode for reimbursement, audit, CI, or automated agent workflows:
+   ```bash
+   invoice-totaler INPUT_PATH --strict -o OUTPUT.xlsx
    ```
    For alternate formats:
    ```bash
    invoice-totaler INPUT_PATH --format json -o summary.json
    invoice-totaler INPUT_PATH --format csv -o summary.csv
    ```
-5. Verify output exists and read the command summary. For `.xlsx`, confirm it is a valid zip or open/import it when the environment supports spreadsheet inspection.
-6. Report the key totals, unique invoice count, output path, and any caveats.
+5. Verify output exists and read the command summary. Exit code `2` in strict mode means the report was written but at least one invoice needs review.
+6. For `.xlsx`, confirm it is a valid zip or open/import it when the environment supports spreadsheet inspection.
+7. Report the key totals, unique invoice count, output path, and any caveats. Always mention `problem_count` or the `问题清单` sheet when present.
 
 ## Platform Notes
 
@@ -44,12 +53,14 @@ Use this skill to turn a pile of invoices into a classified amount summary and a
 - Claude Code: copy or install the folder to `~/.claude/skills/invoice-totaler` or `.claude/skills/invoice-totaler`, then invoke as `/invoice-totaler`.
 - Kiro: import the GitHub skill-folder URL or copy the folder to `~/.kiro/skills/invoice-totaler` or `.kiro/skills/invoice-totaler`.
 - OpenCode: copy the folder to `~/.config/opencode/skill/invoice-totaler`, `.opencode/skill/invoice-totaler`, or use the Claude-compatible `~/.claude/skills/invoice-totaler` path.
+- OpenClaw, Hermes, and other Agent Skills hosts: import the GitHub skill-folder URL or copy this `SKILL.md` directory to the host's global/project skills path.
 - The skill deliberately delegates parsing to the published `invoice-totaler` CLI, so any host only needs shell access and normal filesystem read/write access.
 
 ## Output Expectations
 
 - Preserve currency separation. Do not convert USD/CNY unless the user explicitly asks and provides a rate or requests live lookup.
 - Mention that duplicate PDF/OFD copies are deduplicated by invoice number.
+- Inspect low-confidence/problem rows when available. JSON includes `problem_count` and `problem_rows`; XLSX includes a `问题清单` sheet; detail rows include `amount_source`, `confidence`, and `issues`.
 - For `.7z`, the system needs `7zz`, `7z`, or `bsdtar`; if unavailable, ask for an extracted folder or install an archive tool.
 - For image-only scanned PDFs, explain that the current CLI does not perform OCR.
 
@@ -61,6 +72,8 @@ For detailed amount-selection rules, read [references/amount-policy.md](referenc
 
 ```bash
 invoice-totaler ~/Desktop/发票.7z -o 发票金额分类统计.xlsx
+invoice-totaler ~/Desktop/发票.7z --strict -o 发票金额分类统计.xlsx
 invoice-totaler ./发票 -o 发票金额分类统计.xlsx
 invoice-totaler ./发票/单张发票.ofd --format json -o summary.json
+invoice-totaler doctor
 ```

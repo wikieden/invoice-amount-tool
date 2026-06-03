@@ -26,6 +26,9 @@ class Invoice:
     buyer: str | None
     route_or_item: str | None
     note: str
+    amount_source: str = "none"
+    confidence: str = "low"
+    issues: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -45,12 +48,18 @@ class InvoiceSummary:
     totals: dict[tuple[str, str], CategoryTotal]
     duplicates: dict[str, list[str]]
 
+    @property
+    def problem_rows(self) -> list[Invoice]:
+        return [row for row in self.rows if row.issues or row.confidence == "low"]
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "all_file_count": self.all_file_count,
             "parsed_count": self.parsed_count,
             "unique_count": self.unique_count,
+            "problem_count": len(self.problem_rows),
             "rows": [asdict(row) for row in self.rows],
+            "problem_rows": [asdict(row) for row in self.problem_rows],
             "totals": [
                 asdict(total)
                 for _, total in sorted(self.totals.items(), key=lambda item: (item[0][1], item[0][0]))
@@ -164,23 +173,23 @@ def normalize_date(value: str | None) -> str | None:
     return value
 
 
-def amount_from_text(text: str, category: str) -> tuple[float | None, str]:
+def amount_from_text(text: str, category: str) -> tuple[float | None, str, str]:
     if category == "Apple礼品卡":
         match = re.search(r"Total\s*\$([0-9,]+\.\d{2})", text)
-        return (decimal_or_none(match.group(1)) if match else None, "USD")
+        return (decimal_or_none(match.group(1)) if match else None, "USD", "pdf_apple_total" if match else "none")
     if category == "机票":
         cny_values = [
             amount for amount in (decimal_or_none(value) for value in re.findall(r"CNY\s*([0-9,]+\.\d{2})", text))
             if amount is not None
         ]
-        return (cny_values[-1] if cny_values else None, "CNY")
+        return (cny_values[-1] if cny_values else None, "CNY", "pdf_air_total" if cny_values else "none")
     if category == "火车票":
         match = re.search(r"票价\s*[:：]?\s*￥\s*([0-9,]+\.\d{2})", text)
         if not match:
             match = re.search(r"票价\s*[:：]?.{0,20}?￥\s*\|?\s*([0-9,]+\.\d{2})", text)
         if not match:
             match = re.search(r"￥\s*\|?\s*([0-9,]+\.\d{2})", text)
-        return (decimal_or_none(match.group(1)) if match else None, "CNY")
+        return (decimal_or_none(match.group(1)) if match else None, "CNY", "pdf_railway_fare" if match else "none")
     money_values = [
         amount
         for amount in (
@@ -189,16 +198,34 @@ def amount_from_text(text: str, category: str) -> tuple[float | None, str]:
         )
         if amount is not None
     ]
-    return (max(money_values) if money_values else None, "CNY")
+    return (max(money_values) if money_values else None, "CNY", "pdf_tax_inclusive_total" if money_values else "none")
 
 
-def parse_invoice_text(path: Path, text: str) -> Invoice:
+def invoice_issues(invoice_no: str | None, amount: float | None, extra_issues: Iterable[str] = ()) -> tuple[str, ...]:
+    issues: list[str] = list(extra_issues)
+    if not invoice_no:
+        issues.append("missing_invoice_no")
+    if amount is None:
+        issues.append("missing_amount")
+    return tuple(issues)
+
+
+def confidence_for(amount_source: str, issues: tuple[str, ...]) -> str:
+    if issues:
+        return "low"
+    if amount_source == "structured_ofd":
+        return "high"
+    return "medium"
+
+
+def parse_invoice_text(path: Path, text: str, extra_issues: Iterable[str] = ()) -> Invoice:
     text = clean_text(text)
     category = category_for(path, text)
     invoice_no = invoice_no_from_text(text, path)
-    amount, currency = amount_from_text(text, category)
+    amount, currency, amount_source = amount_from_text(text, category)
     issue_date = issue_date_from_text(text)
     key = invoice_no or f"{category}:{path.stem}:{amount}:{currency}"
+    issues = invoice_issues(invoice_no, amount, extra_issues)
     return Invoice(
         key=key,
         source_file=str(path),
@@ -214,6 +241,9 @@ def parse_invoice_text(path: Path, text: str) -> Invoice:
         buyer=None,
         route_or_item=None,
         note="PDF文本",
+        amount_source=amount_source,
+        confidence=confidence_for(amount_source, issues),
+        issues=issues,
     )
 
 
@@ -293,6 +323,8 @@ def parse_ofd_file(path: Path) -> Invoice:
     amount = _amount_from_ofd_fields(fields)
     invoice_no = fields.get("invoice_no") or invoice_no_from_text(text, path)
     key = invoice_no or f"{category}:{path.stem}:{amount}:CNY"
+    amount_source = "structured_ofd" if amount is not None and fields else "none"
+    issues = invoice_issues(invoice_no, amount)
     return Invoice(
         key=key,
         source_file=str(path),
@@ -308,6 +340,9 @@ def parse_ofd_file(path: Path) -> Invoice:
         buyer=fields.get("buyer"),
         route_or_item=route,
         note="结构化OFD" if fields else "OFD文本",
+        amount_source=amount_source,
+        confidence=confidence_for(amount_source, issues),
+        issues=issues,
     )
 
 
@@ -316,9 +351,12 @@ def parse_pdf_file(path: Path) -> Invoice:
         from pypdf import PdfReader
     except ImportError as exc:
         raise RuntimeError("PDF parsing requires the pypdf package. Install with `pip install pypdf`.") from exc
-    reader = PdfReader(str(path))
-    text = "\n".join(page.extract_text() or "" for page in reader.pages)
-    return parse_invoice_text(path, text)
+    try:
+        reader = PdfReader(str(path))
+        text = "\n".join(page.extract_text() or "" for page in reader.pages)
+        return parse_invoice_text(path, text)
+    except Exception:
+        return parse_invoice_text(path, "", extra_issues=("pdf_text_extraction_failed",))
 
 
 def parse_invoice_file(path: Path) -> Invoice | None:

@@ -48,13 +48,13 @@ pipx install invoice-amount-tool
 从 GitHub Release 安装 wheel：
 
 ```bash
-python -m pip install https://github.com/wikieden/invoice-amount-tool/releases/download/v0.1.0/invoice_amount_tool-0.1.0-py3-none-any.whl
+python -m pip install https://github.com/wikieden/invoice-amount-tool/releases/download/v0.2.0/invoice_amount_tool-0.2.0-py3-none-any.whl
 ```
 
 用 `pipx` 安装成独立命令行工具：
 
 ```bash
-pipx install https://github.com/wikieden/invoice-amount-tool/releases/download/v0.1.0/invoice_amount_tool-0.1.0-py3-none-any.whl
+pipx install https://github.com/wikieden/invoice-amount-tool/releases/download/v0.2.0/invoice_amount_tool-0.2.0-py3-none-any.whl
 ```
 
 从源码安装：
@@ -89,6 +89,18 @@ invoice-totaler ~/Desktop/发票.7z --format csv -o 发票金额分类统计.csv
 
 ```bash
 invoice-totaler ~/Desktop/发票.7z --format json -o 发票金额分类统计.json
+```
+
+严格模式适合 CI、报销预审或 agent 自动流程。它会先写出报告；如果发现缺发票号、缺金额或低置信度发票，则返回退出码 `2`：
+
+```bash
+invoice-totaler ~/Desktop/发票.7z --strict -o 发票金额分类统计.xlsx
+```
+
+检查本机依赖：
+
+```bash
+invoice-totaler doctor
 ```
 
 也可以直接处理目录：
@@ -188,6 +200,16 @@ cp -R /tmp/invoice-amount-tool/skills/invoice-totaler .opencode/skill/invoice-to
 
 OpenCode 也会发现 Claude-compatible 路径，例如 `~/.claude/skills/invoice-totaler`。
 
+### 作为 OpenClaw / Hermes / 其他 Agent Skills 工具使用
+
+这个 skill 是普通 `SKILL.md` 目录，不绑定特定宿主。OpenClaw、Hermes 或其他支持 Agent Skills / `SKILL.md` 的工具，可以把下面这个目录作为 skill 源：
+
+```text
+https://github.com/wikieden/invoice-amount-tool/tree/main/skills/invoice-totaler
+```
+
+如果工具只支持本地目录，把 `skills/invoice-totaler` 复制到该工具的全局或项目级 skills 目录即可。该 skill 只要求宿主能调用 shell、读写普通文件，并能通过 `uv`/`pip`/`pipx` 安装 PyPI 包。
+
 ### Skill 发布渠道
 
 - 当前发布位置：本仓库的 `skills/invoice-totaler` 目录。
@@ -195,11 +217,14 @@ OpenCode 也会发现 Claude-compatible 路径，例如 `~/.claude/skills/invoic
 - Agent Skills 标准：[`agentskills.io`](https://agentskills.io/) 是 SKILL.md 格式规范与生态入口。
 - 社区目录：可补充提交到支持 GitHub repo 索引的社区 skill registry，例如 SkillHub、OmniSkill、AgentSkills 等。提交前应确认 registry 的安全/审核/溯源机制。
 
-输出的 Excel 包含 3 个页签：
+输出的 Excel 包含 4 个页签：
 
 - `总览`：分类汇总和币种总计
 - `明细`：去重后的每张发票
+- `问题清单`：低置信度或缺关键字段的发票，便于人工复核
 - `重复文件`：被合并的重复 PDF/OFD 文件
+
+JSON 输出包含 `problem_count`、`problem_rows`，明细行包含 `amount_source`、`confidence`、`issues`。CSV/XLSX 明细也包含这些字段。
 
 ## 开发
 

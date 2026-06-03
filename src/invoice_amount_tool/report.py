@@ -21,6 +21,9 @@ DETAIL_HEADERS = [
     "行程/项目",
     "来源文件",
     "备注",
+    "金额来源",
+    "置信度",
+    "问题",
 ]
 
 
@@ -55,8 +58,35 @@ def write_csv(summary: InvoiceSummary, path: Path) -> None:
                     row.route_or_item or "",
                     row.source_file,
                     row.note,
+                    row.amount_source,
+                    row.confidence,
+                    ",".join(row.issues),
                 ]
             )
+        if summary.problem_rows:
+            writer.writerow([])
+            writer.writerow(["问题清单"])
+            writer.writerow(DETAIL_HEADERS)
+            for row in summary.problem_rows:
+                writer.writerow(
+                    [
+                        row.category,
+                        row.issue_date or "",
+                        row.travel_date or "",
+                        row.invoice_no or "",
+                        row.currency,
+                        f"{float(row.amount or 0):.2f}",
+                        "" if row.tax is None else f"{float(row.tax):.2f}",
+                        row.seller or "",
+                        row.buyer or "",
+                        row.route_or_item or "",
+                        row.source_file,
+                        row.note,
+                        row.amount_source,
+                        row.confidence,
+                        ",".join(row.issues),
+                    ]
+                )
 
 
 def _col_name(index: int) -> str:
@@ -97,6 +127,7 @@ def write_xlsx(summary: InvoiceSummary, path: Path) -> None:
         [],
         ["原始 PDF/OFD 文件数", summary.all_file_count],
         ["去重后发票数", summary.unique_count],
+        ["需复核发票数", len(summary.problem_rows)],
         [
             "人民币合计",
             round(sum(total.amount for total in summary.totals.values() if total.currency == "CNY"), 2),
@@ -128,6 +159,31 @@ def write_xlsx(summary: InvoiceSummary, path: Path) -> None:
                 row.route_or_item or "",
                 row.source_file,
                 row.note,
+                row.amount_source,
+                row.confidence,
+                ",".join(row.issues),
+            ]
+        )
+
+    problem_rows: list[list[object]] = [DETAIL_HEADERS]
+    for row in summary.problem_rows:
+        problem_rows.append(
+            [
+                row.category,
+                row.issue_date or "",
+                row.travel_date or "",
+                row.invoice_no or "",
+                row.currency,
+                float(row.amount or 0),
+                "" if row.tax is None else float(row.tax),
+                row.seller or "",
+                row.buyer or "",
+                row.route_or_item or "",
+                row.source_file,
+                row.note,
+                row.amount_source,
+                row.confidence,
+                ",".join(row.issues),
             ]
         )
 
@@ -135,7 +191,7 @@ def write_xlsx(summary: InvoiceSummary, path: Path) -> None:
     for key, files in sorted(summary.duplicates.items()):
         duplicate_rows.append([key, len(files), "\n".join(files)])
 
-    sheets = [("总览", overview_rows), ("明细", detail_rows), ("重复文件", duplicate_rows)]
+    sheets = [("总览", overview_rows), ("明细", detail_rows), ("问题清单", problem_rows), ("重复文件", duplicate_rows)]
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         zf.writestr(
             "[Content_Types].xml",

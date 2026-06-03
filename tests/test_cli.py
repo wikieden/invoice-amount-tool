@@ -53,6 +53,25 @@ class CliInputTests(unittest.TestCase):
             self.assertEqual(data["unique_count"], 2)
             self.assertEqual(data["totals"][0]["amount"], 986.0)
 
+    def test_strict_mode_returns_nonzero_when_invoice_has_issues(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            invoice = Path(tmp) / "empty.ofd"
+            output = Path(tmp) / "summary.json"
+            with zipfile.ZipFile(invoice, "w") as zf:
+                zf.writestr("OFD.xml", "<ofd></ofd>")
+
+            exit_code = main([str(invoice), "--format", "json", "-o", str(output), "--strict"])
+
+            self.assertEqual(exit_code, 2)
+            data = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual(data["problem_count"], 1)
+            self.assertIn("missing_amount", data["problem_rows"][0]["issues"])
+
+    def test_doctor_command_runs_dependency_checks(self):
+        exit_code = main(["doctor"])
+
+        self.assertEqual(exit_code, 0)
+
 
 if __name__ == "__main__":
     unittest.main()
