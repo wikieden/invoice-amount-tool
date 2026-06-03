@@ -133,6 +133,24 @@ cp -R skills/invoice-totaler ~/.codex/skills/invoice-totaler
 $invoice-totaler 统计这个压缩包里的发票金额
 ```
 
+### 作为 Claude Code Skill 使用
+
+Claude Code 也支持 Agent Skills。把同一个目录复制到 Claude 的 skills 目录即可：
+
+```bash
+mkdir -p ~/.claude/skills
+git clone --depth 1 https://github.com/wikieden/invoice-amount-tool.git /tmp/invoice-amount-tool
+cp -R /tmp/invoice-amount-tool/skills/invoice-totaler ~/.claude/skills/invoice-totaler
+```
+
+然后在 Claude Code 里调用：
+
+```text
+/invoice-totaler 统计这个压缩包里的发票金额
+```
+
+这个 skill 的 frontmatter 包含 `allowed-tools: Bash Read Write`。这是 Claude Code 支持的扩展字段，用于在 skill 激活时预批准基础 shell / 文件读写工具；其他 Agent Skills host 不支持时会忽略它。
+
 ### Skill 发布渠道
 
 - 当前发布位置：本仓库的 `skills/invoice-totaler` 目录。
