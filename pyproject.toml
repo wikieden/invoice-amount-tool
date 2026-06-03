@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "invoice-amount-tool"
+version = "0.1.0"
+description = "Extract, deduplicate, categorise, and summarise Chinese PDF/OFD invoice amounts."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "Invoice Amount Tool contributors" }]
+keywords = ["invoice", "ofd", "pdf", "expense", "cli"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Financial and Insurance Industry",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Office/Business :: Financial :: Accounting",
+]
+dependencies = ["pypdf>=4.0"]
+
+[project.scripts]
+invoice-totaler = "invoice_amount_tool.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/invoice_amount_tool"]
