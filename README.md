@@ -21,6 +21,18 @@
 
 ## 安装
 
+从 PyPI 安装：
+
+```bash
+python -m pip install invoice-amount-tool
+```
+
+或安装成独立命令行工具：
+
+```bash
+pipx install invoice-amount-tool
+```
+
 从 GitHub Release 安装 wheel：
 
 ```bash
@@ -109,6 +121,20 @@ git branch -M main
 git remote add origin git@github.com:<your-name>/invoice-amount-tool.git
 git push -u origin main
 ```
+
+## PyPI 发布
+
+仓库包含 `.github/workflows/publish-pypi.yml`，支持 PyPI Trusted Publishing。
+
+首次发布新项目时，在 PyPI 账号的 Publishing 页面添加 Pending Publisher：
+
+- PyPI project name: `invoice-amount-tool`
+- Owner: `wikieden`
+- Repository name: `invoice-amount-tool`
+- Workflow name: `publish-pypi.yml`
+- Environment name: `pypi`
+
+保存后，到 GitHub Actions 里手动运行 `Publish to PyPI` 工作流即可发布当前版本。
 
 ## 限制
 
