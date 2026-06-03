@@ -27,7 +27,19 @@
 python -m pip install invoice-amount-tool
 ```
 
-或安装成独立命令行工具：
+推荐用 `uv` 安装成独立命令行工具：
+
+```bash
+uv tool install invoice-amount-tool
+```
+
+如果你的 `uv` 使用了镜像源或缓存，刚发布的新包可能暂时找不到；可以强制走官方 PyPI 并刷新这个包：
+
+```bash
+uv tool install --default-index https://pypi.org/simple --refresh-package invoice-amount-tool invoice-amount-tool
+```
+
+也可以用 `pipx` 安装成独立命令行工具：
 
 ```bash
 pipx install invoice-amount-tool
