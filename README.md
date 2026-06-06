@@ -1,6 +1,6 @@
 # invoice-amount-tool
 
-一个用于统计发票金额的命令行工具。它可以读取目录、单个 PDF/OFD 文件，或 `.zip` / `.7z` 压缩包，提取发票金额，按发票号去重，并按分类汇总导出。
+一个用于统计发票金额的命令行工具。它可以读取目录、单个 PDF/OFD 文件，或 `.zip` / `.7z` / `.tar` / `.tar.gz` / `.tgz` 压缩包，提取发票金额，按发票号去重，并按分类汇总导出。
 
 当前内置分类包括：
 
@@ -48,13 +48,13 @@ pipx install invoice-amount-tool
 从 GitHub Release 安装 wheel：
 
 ```bash
-python -m pip install https://github.com/wikieden/invoice-amount-tool/releases/download/v0.3.0/invoice_amount_tool-0.3.0-py3-none-any.whl
+python -m pip install https://github.com/wikieden/invoice-amount-tool/releases/download/v0.3.1/invoice_amount_tool-0.3.1-py3-none-any.whl
 ```
 
 用 `pipx` 安装成独立命令行工具：
 
 ```bash
-pipx install https://github.com/wikieden/invoice-amount-tool/releases/download/v0.3.0/invoice_amount_tool-0.3.0-py3-none-any.whl
+pipx install https://github.com/wikieden/invoice-amount-tool/releases/download/v0.3.1/invoice_amount_tool-0.3.1-py3-none-any.whl
 ```
 
 从源码安装：
@@ -69,7 +69,13 @@ python -m pip install .
 python -m pip install -e .
 ```
 
-`.7z` 压缩包需要系统里有 `7zz`、`7z` 或 `bsdtar` 任意一个命令。也可以先手动解压，然后把目录传给工具。
+支持三类输入：
+
+- 文件夹：递归扫描其中的 `.pdf` / `.ofd`
+- 单个文件：`.pdf` / `.ofd`
+- 压缩包：`.zip` / `.7z` / `.tar` / `.tar.gz` / `.tgz`
+
+`.zip` 和 tar 系列压缩包使用 Python 标准库解压；`.7z` 需要系统里有 `7zz`、`7z` 或 `bsdtar` 任意一个命令。也可以先手动解压，然后把目录传给工具。
 
 ## 使用
 
@@ -139,6 +145,13 @@ invoice-totaler ./发票 -o 发票金额分类统计.xlsx
 
 ```bash
 invoice-totaler ./发票/火车票/26949134178000969211.ofd -o 单张发票统计.xlsx
+```
+
+也可以处理 zip 或 tar 系列压缩包：
+
+```bash
+invoice-totaler ./发票.zip -o 发票金额分类统计.xlsx
+invoice-totaler ./发票.tar.gz -o 发票金额分类统计.xlsx
 ```
 
 ## 作为 Codex Skill 使用

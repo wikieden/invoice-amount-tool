@@ -1,4 +1,5 @@
 import json
+import tarfile
 import tempfile
 import unittest
 import zipfile
@@ -52,6 +53,48 @@ class CliInputTests(unittest.TestCase):
             data = json.loads(output.read_text(encoding="utf-8"))
             self.assertEqual(data["unique_count"], 2)
             self.assertEqual(data["totals"][0]["amount"], 986.0)
+
+    def test_cli_accepts_zip_archive(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            invoice = Path(tmp) / "ticket.ofd"
+            archive = Path(tmp) / "invoices.zip"
+            output = Path(tmp) / "summary.json"
+            make_railway_ofd(invoice)
+            with zipfile.ZipFile(archive, "w") as zf:
+                zf.write(invoice, "nested/ticket.ofd")
+
+            exit_code = main([str(archive), "--format", "json", "-o", str(output)])
+
+            self.assertEqual(exit_code, 0)
+            data = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual(data["unique_count"], 1)
+            self.assertEqual(data["rows"][0]["amount"], 493.0)
+
+    def test_cli_accepts_tar_gz_archive(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            invoice = Path(tmp) / "ticket.ofd"
+            archive = Path(tmp) / "invoices.tar.gz"
+            output = Path(tmp) / "summary.json"
+            make_railway_ofd(invoice)
+            with tarfile.open(archive, "w:gz") as tf:
+                tf.add(invoice, "nested/ticket.ofd")
+
+            exit_code = main([str(archive), "--format", "json", "-o", str(output)])
+
+            self.assertEqual(exit_code, 0)
+            data = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual(data["unique_count"], 1)
+            self.assertEqual(data["rows"][0]["amount"], 493.0)
+
+    def test_cli_rejects_unsupported_input_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            notes = Path(tmp) / "notes.txt"
+            notes.write_text("not an invoice", encoding="utf-8")
+
+            with self.assertRaises(SystemExit) as caught:
+                main([str(notes), "--format", "json"])
+
+            self.assertEqual(caught.exception.code, 2)
 
     def test_cli_uses_custom_category_rules(self):
         with tempfile.TemporaryDirectory() as tmp:

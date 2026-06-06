@@ -13,10 +13,24 @@ from .core import load_category_rules, parse_invoice_file, scan_invoice_files, s
 from .report import write_csv, write_json, write_xlsx
 
 
+INVOICE_FILE_SUFFIXES = {".pdf", ".ofd"}
+STDLIB_ARCHIVE_SUFFIXES = {".zip", ".tar", ".tar.gz", ".tgz"}
+SEVEN_Z_ARCHIVE_SUFFIXES = {".7z"}
+ARCHIVE_SUFFIXES = STDLIB_ARCHIVE_SUFFIXES | SEVEN_Z_ARCHIVE_SUFFIXES
+
+
+def input_suffix(path: Path) -> str:
+    suffixes = [suffix.lower() for suffix in path.suffixes]
+    if len(suffixes) >= 2 and suffixes[-2:] == [".tar", ".gz"]:
+        return ".tar.gz"
+    return suffixes[-1] if suffixes else ""
+
+
 def extract_archive(path: Path) -> tempfile.TemporaryDirectory[str]:
     tempdir = tempfile.TemporaryDirectory(prefix="invoice-totaler-")
     target = Path(tempdir.name)
-    if path.suffix.lower() == ".zip":
+    suffix = input_suffix(path)
+    if suffix in STDLIB_ARCHIVE_SUFFIXES:
         shutil.unpack_archive(str(path), str(target))
         return tempdir
     command = None
@@ -34,7 +48,7 @@ def extract_archive(path: Path) -> tempfile.TemporaryDirectory[str]:
 
 
 def source_root(input_path: Path) -> tuple[Path, tempfile.TemporaryDirectory[str] | None]:
-    if input_path.is_dir() or input_path.suffix.lower() in {".pdf", ".ofd"}:
+    if input_path.is_dir() or input_suffix(input_path) in INVOICE_FILE_SUFFIXES:
         return input_path, None
     tempdir = extract_archive(input_path)
     return Path(tempdir.name), tempdir
@@ -46,7 +60,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="统计 PDF/OFD 发票金额，按分类去重汇总，并导出 JSON/CSV/XLSX。",
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
-    parser.add_argument("input", help="发票目录、单个 PDF/OFD，或 .zip/.7z 压缩包")
+    parser.add_argument("input", help="发票目录、单个 PDF/OFD，或 .zip/.7z/.tar/.tar.gz/.tgz 压缩包")
     parser.add_argument("-o", "--output", default="invoice-summary.xlsx", help="输出文件路径")
     parser.add_argument("--format", choices=["xlsx", "csv", "json"], default="xlsx", help="输出格式")
     parser.add_argument("--strict", action="store_true", help="发现低置信度或缺字段发票时返回退出码 2")
@@ -67,7 +81,7 @@ def doctor() -> int:
         print("缺少 pypdf 时无法解析 PDF；请重新安装 invoice-amount-tool。")
         return 1
     if not checks[1][1]:
-        print("未找到 .7z 解压工具；仍可处理目录、单个 PDF/OFD 和 .zip。")
+        print("未找到 .7z 解压工具；仍可处理目录、单个 PDF/OFD 和 .zip/.tar/.tar.gz/.tgz。")
     return 0
 
 
@@ -81,6 +95,8 @@ def main(argv: list[str] | None = None) -> int:
     output_path = Path(args.output).expanduser().resolve()
     if not input_path.exists():
         parser.error(f"input not found: {input_path}")
+    if input_path.is_file() and input_suffix(input_path) not in INVOICE_FILE_SUFFIXES | ARCHIVE_SUFFIXES:
+        parser.error("input must be a directory, .pdf/.ofd file, or .zip/.7z/.tar/.tar.gz/.tgz archive")
     category_rules = []
     if args.category_rules:
         rules_path = Path(args.category_rules).expanduser().resolve()
