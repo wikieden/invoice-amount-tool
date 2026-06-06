@@ -1,0 +1,17 @@
+{
+  "rules": [
+    {
+      "category": "住宿",
+      "path_contains": ["酒店", "住宿"],
+      "text_contains": ["住宿服务"]
+    },
+    {
+      "category": "差旅交通",
+      "path_contains": ["车票", "机票", "行程单"]
+    },
+    {
+      "category": "办公用品",
+      "text_contains": ["办公用品", "文具", "耗材"]
+    }
+  ]
+}

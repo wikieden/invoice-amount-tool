@@ -18,6 +18,7 @@ Use this skill to turn a pile of invoices into a classified amount summary and a
 2. Choose output format:
    - Default to `.xlsx` for user-facing summaries.
    - Use `.csv` or `.json` when the user asks for data interchange or automation.
+   - Use `--category-rules RULES.json` when the user provides custom category names, reimbursement buckets, departments, projects, or keyword rules.
 3. Ensure the CLI is available:
    ```bash
    command -v invoice-totaler || uv tool install invoice-amount-tool
@@ -37,6 +38,10 @@ Use this skill to turn a pile of invoices into a classified amount summary and a
    Use strict mode for reimbursement, audit, CI, or automated agent workflows:
    ```bash
    invoice-totaler INPUT_PATH --strict -o OUTPUT.xlsx
+   ```
+   For custom categories:
+   ```bash
+   invoice-totaler INPUT_PATH --category-rules RULES.json -o OUTPUT.xlsx
    ```
    For alternate formats:
    ```bash
@@ -61,6 +66,7 @@ Use this skill to turn a pile of invoices into a classified amount summary and a
 - Preserve currency separation. Do not convert USD/CNY unless the user explicitly asks and provides a rate or requests live lookup.
 - Mention that duplicate PDF/OFD copies are deduplicated by invoice number.
 - Inspect low-confidence/problem rows when available. JSON includes `problem_count` and `problem_rows`; XLSX includes a `问题清单` sheet; detail rows include `amount_source`, `confidence`, and `issues`.
+- Custom category rules are JSON. Rules match in order and take priority over built-in categories. A rule can contain `category`, `path_contains`, and/or `text_contains`; both path and text conditions must match when both are present.
 - For `.7z`, the system needs `7zz`, `7z`, or `bsdtar`; if unavailable, ask for an extracted folder or install an archive tool.
 - For image-only scanned PDFs, explain that the current CLI does not perform OCR.
 
@@ -73,6 +79,7 @@ For detailed amount-selection rules, read [references/amount-policy.md](referenc
 ```bash
 invoice-totaler ~/Desktop/发票.7z -o 发票金额分类统计.xlsx
 invoice-totaler ~/Desktop/发票.7z --strict -o 发票金额分类统计.xlsx
+invoice-totaler ~/Desktop/发票.7z --category-rules category-rules.json -o 发票金额分类统计.xlsx
 invoice-totaler ./发票 -o 发票金额分类统计.xlsx
 invoice-totaler ./发票/单张发票.ofd --format json -o summary.json
 invoice-totaler doctor

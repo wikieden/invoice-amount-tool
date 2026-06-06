@@ -7,6 +7,7 @@ The `invoice-totaler` command uses these defaults:
 - Air transport itinerary invoices: total amount, `合计`, not base fare alone.
 - Apple invoices: preserve USD as USD and do not convert to CNY.
 - Duplicate files with the same invoice number are counted once. Structured OFD data is preferred over PDF text when both exist.
+- Custom category rules only change the reporting category. Amount selection still follows the detected invoice document type, such as air itinerary total amount or railway fare.
 
 Confidence fields:
 

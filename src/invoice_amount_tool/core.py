@@ -32,6 +32,19 @@ class Invoice:
 
 
 @dataclass(frozen=True)
+class CategoryRule:
+    category: str
+    path_contains: tuple[str, ...] = ()
+    text_contains: tuple[str, ...] = ()
+
+    def matches(self, path: Path, text: str) -> bool:
+        path_text = str(path)
+        path_ok = not self.path_contains or any(token in path_text for token in self.path_contains)
+        text_ok = not self.text_contains or any(token in text for token in self.text_contains)
+        return path_ok and text_ok
+
+
+@dataclass(frozen=True)
 class CategoryTotal:
     category: str
     currency: str
@@ -118,7 +131,50 @@ def _text_codes(xml_bytes: bytes) -> str:
     )
 
 
-def category_for(path: Path, text: str) -> str:
+def _strings_from_rule(value: object, field_name: str) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        return (value,)
+    if isinstance(value, list) and all(isinstance(item, str) for item in value):
+        return tuple(value)
+    raise ValueError(f"category rule field {field_name!r} must be a string or list of strings")
+
+
+def load_category_rules(path: Path) -> list[CategoryRule]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    raw_rules = data.get("rules") if isinstance(data, dict) else data
+    if not isinstance(raw_rules, list):
+        raise ValueError("category rules must be a list or an object with a 'rules' list")
+    rules: list[CategoryRule] = []
+    for index, raw_rule in enumerate(raw_rules, start=1):
+        if not isinstance(raw_rule, dict):
+            raise ValueError(f"category rule #{index} must be an object")
+        category = raw_rule.get("category")
+        if not isinstance(category, str) or not category.strip():
+            raise ValueError(f"category rule #{index} requires a non-empty category")
+        rule = CategoryRule(
+            category=category.strip(),
+            path_contains=_strings_from_rule(raw_rule.get("path_contains"), "path_contains"),
+            text_contains=_strings_from_rule(raw_rule.get("text_contains"), "text_contains"),
+        )
+        if not rule.path_contains and not rule.text_contains:
+            raise ValueError(f"category rule #{index} requires path_contains or text_contains")
+        rules.append(rule)
+    return rules
+
+
+def custom_category_for(path: Path, text: str, category_rules: Iterable[CategoryRule] = ()) -> str | None:
+    for rule in category_rules:
+        if rule.matches(path, text):
+            return rule.category
+    return None
+
+
+def category_for(path: Path, text: str, category_rules: Iterable[CategoryRule] = ()) -> str:
+    custom_category = custom_category_for(path, text, category_rules)
+    if custom_category:
+        return custom_category
     path_text = str(path)
     if "/房租/" in path_text or "租金" in path.name or "房租" in path.name:
         return "房租"
@@ -218,11 +274,17 @@ def confidence_for(amount_source: str, issues: tuple[str, ...]) -> str:
     return "medium"
 
 
-def parse_invoice_text(path: Path, text: str, extra_issues: Iterable[str] = ()) -> Invoice:
+def parse_invoice_text(
+    path: Path,
+    text: str,
+    extra_issues: Iterable[str] = (),
+    category_rules: Iterable[CategoryRule] = (),
+) -> Invoice:
     text = clean_text(text)
-    category = category_for(path, text)
+    built_in_category = category_for(path, text)
+    category = custom_category_for(path, text, category_rules) or built_in_category
     invoice_no = invoice_no_from_text(text, path)
-    amount, currency, amount_source = amount_from_text(text, category)
+    amount, currency, amount_source = amount_from_text(text, built_in_category)
     issue_date = issue_date_from_text(text)
     key = invoice_no or f"{category}:{path.stem}:{amount}:{currency}"
     issues = invoice_issues(invoice_no, amount, extra_issues)
@@ -256,7 +318,7 @@ def _amount_from_ofd_fields(fields: dict[str, str]) -> float | None:
     return None
 
 
-def parse_ofd_file(path: Path) -> Invoice:
+def parse_ofd_file(path: Path, category_rules: Iterable[CategoryRule] = ()) -> Invoice:
     fields: dict[str, str] = {}
     text_parts: list[str] = []
     with zipfile.ZipFile(path) as zf:
@@ -310,10 +372,12 @@ def parse_ofd_file(path: Path) -> Invoice:
             if name.endswith("Content.xml") or name.endswith("OFD.xml"):
                 text_parts.append(_text_codes(data))
     text = clean_text(" ".join(text_parts))
-    category = category_for(path, text)
-    if fields.get("train_no"):
+    rule_text = clean_text(" ".join([text, *fields.values()]))
+    custom_category = custom_category_for(path, rule_text, category_rules)
+    category = custom_category or category_for(path, text)
+    if not custom_category and fields.get("train_no"):
         category = "火车票"
-    elif fields.get("flight_no") or "AirTransport" in "".join(fields.keys()):
+    elif not custom_category and (fields.get("flight_no") or "AirTransport" in "".join(fields.keys())):
         category = "机票"
     route = " - ".join(part for part in [fields.get("departure"), fields.get("destination")] if part) or None
     if fields.get("train_no"):
@@ -346,7 +410,7 @@ def parse_ofd_file(path: Path) -> Invoice:
     )
 
 
-def parse_pdf_file(path: Path) -> Invoice:
+def parse_pdf_file(path: Path, category_rules: Iterable[CategoryRule] = ()) -> Invoice:
     try:
         from pypdf import PdfReader
     except ImportError as exc:
@@ -354,17 +418,17 @@ def parse_pdf_file(path: Path) -> Invoice:
     try:
         reader = PdfReader(str(path))
         text = "\n".join(page.extract_text() or "" for page in reader.pages)
-        return parse_invoice_text(path, text)
+        return parse_invoice_text(path, text, category_rules=category_rules)
     except Exception:
-        return parse_invoice_text(path, "", extra_issues=("pdf_text_extraction_failed",))
+        return parse_invoice_text(path, "", extra_issues=("pdf_text_extraction_failed",), category_rules=category_rules)
 
 
-def parse_invoice_file(path: Path) -> Invoice | None:
+def parse_invoice_file(path: Path, category_rules: Iterable[CategoryRule] = ()) -> Invoice | None:
     suffix = path.suffix.lower()
     if suffix == ".ofd":
-        return parse_ofd_file(path)
+        return parse_ofd_file(path, category_rules)
     if suffix == ".pdf":
-        return parse_pdf_file(path)
+        return parse_pdf_file(path, category_rules)
     return None
 
 

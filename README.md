@@ -48,13 +48,13 @@ pipx install invoice-amount-tool
 从 GitHub Release 安装 wheel：
 
 ```bash
-python -m pip install https://github.com/wikieden/invoice-amount-tool/releases/download/v0.2.0/invoice_amount_tool-0.2.0-py3-none-any.whl
+python -m pip install https://github.com/wikieden/invoice-amount-tool/releases/download/v0.3.0/invoice_amount_tool-0.3.0-py3-none-any.whl
 ```
 
 用 `pipx` 安装成独立命令行工具：
 
 ```bash
-pipx install https://github.com/wikieden/invoice-amount-tool/releases/download/v0.2.0/invoice_amount_tool-0.2.0-py3-none-any.whl
+pipx install https://github.com/wikieden/invoice-amount-tool/releases/download/v0.3.0/invoice_amount_tool-0.3.0-py3-none-any.whl
 ```
 
 从源码安装：
@@ -102,6 +102,32 @@ invoice-totaler ~/Desktop/发票.7z --strict -o 发票金额分类统计.xlsx
 ```bash
 invoice-totaler doctor
 ```
+
+自定义分类规则：
+
+```bash
+invoice-totaler ~/Desktop/发票.7z --category-rules examples/category-rules.json -o 发票金额分类统计.xlsx
+```
+
+规则文件使用 JSON，不需要额外依赖。规则按顺序匹配，命中后优先于内置分类：
+
+```json
+{
+  "rules": [
+    {
+      "category": "住宿",
+      "path_contains": ["酒店", "住宿"],
+      "text_contains": ["住宿服务"]
+    },
+    {
+      "category": "办公用品",
+      "text_contains": ["办公用品", "文具", "耗材"]
+    }
+  ]
+}
+```
+
+`path_contains` 和 `text_contains` 可以是字符串或字符串数组；同一条规则里同时写两者时，需要路径和文本都匹配。OFD 结构化字段也会参与文本匹配，所以可以用车次、航班号、站点等字段做分类规则。
 
 也可以直接处理目录：
 

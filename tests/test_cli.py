@@ -53,6 +53,35 @@ class CliInputTests(unittest.TestCase):
             self.assertEqual(data["unique_count"], 2)
             self.assertEqual(data["totals"][0]["amount"], 986.0)
 
+    def test_cli_uses_custom_category_rules(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            invoice = Path(tmp) / "ticket.ofd"
+            output = Path(tmp) / "summary.json"
+            rules = Path(tmp) / "rules.json"
+            make_railway_ofd(invoice)
+            rules.write_text(
+                json.dumps(
+                    {
+                        "rules": [
+                            {
+                                "category": "差旅交通",
+                                "path_contains": ["ticket"],
+                                "text_contains": ["G256"],
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            exit_code = main([str(invoice), "--format", "json", "-o", str(output), "--category-rules", str(rules)])
+
+            self.assertEqual(exit_code, 0)
+            data = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual(data["rows"][0]["category"], "差旅交通")
+            self.assertEqual(data["totals"][0]["category"], "差旅交通")
+
     def test_strict_mode_returns_nonzero_when_invoice_has_issues(self):
         with tempfile.TemporaryDirectory() as tmp:
             invoice = Path(tmp) / "empty.ofd"

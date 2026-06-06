@@ -5,7 +5,14 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from invoice_amount_tool.core import Invoice, parse_invoice_text, parse_ofd_file, parse_pdf_file, summarize_invoices
+from invoice_amount_tool.core import (
+    CategoryRule,
+    Invoice,
+    parse_invoice_text,
+    parse_ofd_file,
+    parse_pdf_file,
+    summarize_invoices,
+)
 
 
 class InvoiceParsingTests(unittest.TestCase):
@@ -72,6 +79,32 @@ class InvoiceParsingTests(unittest.TestCase):
         self.assertEqual(invoice.amount_source, "none")
         self.assertIn("missing_invoice_no", invoice.issues)
         self.assertIn("missing_amount", invoice.issues)
+
+    def test_custom_category_rule_matches_path_and_text(self):
+        text = (
+            "电子发票（普通发票） 发票号码：26332000004305034306 "
+            "价税合计（小写） ¥ 884.00 *住宿服务*住宿费"
+        )
+        rules = [CategoryRule(category="住宿", path_contains=("酒店",), text_contains=("住宿服务",))]
+
+        invoice = parse_invoice_text(Path("酒店/住宿费.pdf"), text, category_rules=rules)
+
+        self.assertEqual(invoice.category, "住宿")
+        self.assertEqual(invoice.amount, 884.0)
+
+    def test_custom_category_does_not_change_amount_policy(self):
+        text = (
+            "电子发票（航空运输电子客票行程单） 发票号码:26948731111036166786 "
+            "CNY 733.94 CNY 18.35 9% CNY 67.71 CNY 50.00 CNY 0.00 CNY 870.00"
+        )
+        rules = [CategoryRule(category="差旅交通", path_contains=("机票",))]
+
+        invoice = parse_invoice_text(Path("机票/电子行程单_26948731111036166786.pdf"), text, category_rules=rules)
+
+        self.assertEqual(invoice.category, "差旅交通")
+        self.assertEqual(invoice.amount, 870.0)
+        self.assertEqual(invoice.amount_source, "pdf_air_total")
+        self.assertEqual(invoice.issues, ())
 
     def test_pdf_text_extraction_failure_becomes_problem_row(self):
         class BrokenPage:

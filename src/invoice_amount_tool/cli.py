@@ -9,7 +9,7 @@ import tempfile
 from pathlib import Path
 
 from . import __version__
-from .core import parse_invoice_file, scan_invoice_files, summarize_invoices
+from .core import load_category_rules, parse_invoice_file, scan_invoice_files, summarize_invoices
 from .report import write_csv, write_json, write_xlsx
 
 
@@ -50,6 +50,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("-o", "--output", default="invoice-summary.xlsx", help="输出文件路径")
     parser.add_argument("--format", choices=["xlsx", "csv", "json"], default="xlsx", help="输出格式")
     parser.add_argument("--strict", action="store_true", help="发现低置信度或缺字段发票时返回退出码 2")
+    parser.add_argument("--category-rules", help="自定义分类规则 JSON 文件路径")
     return parser
 
 
@@ -80,13 +81,22 @@ def main(argv: list[str] | None = None) -> int:
     output_path = Path(args.output).expanduser().resolve()
     if not input_path.exists():
         parser.error(f"input not found: {input_path}")
+    category_rules = []
+    if args.category_rules:
+        rules_path = Path(args.category_rules).expanduser().resolve()
+        if not rules_path.exists():
+            parser.error(f"category rules not found: {rules_path}")
+        try:
+            category_rules = load_category_rules(rules_path)
+        except ValueError as exc:
+            parser.error(str(exc))
     tempdir = None
     try:
         root, tempdir = source_root(input_path)
         files = scan_invoice_files(root)
         invoices = []
         for file in files:
-            parsed = parse_invoice_file(file)
+            parsed = parse_invoice_file(file, category_rules)
             if parsed is not None:
                 invoices.append(parsed)
         summary = summarize_invoices(invoices, all_file_count=len(files))
